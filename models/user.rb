@@ -1,5 +1,6 @@
 module Model
   class User
+    include Model::Helpers
     attr_reader :db, :table
 
     def initialize(attrs = {})
@@ -49,12 +50,59 @@ module Model
       follower_id = User.get_id(db, params['follower'])
       followee_id = User.get_id(db, params['followee'])
       db.query(
-        "INSERT IGNORE INTO following SET
+        "INSERT IGNORE INTO Followers SET
           follower_id = '#{follower_id}',
           followee_id = '#{followee_id}';"
       )
 
-      result = User.find_by_id(db, params['follower'])
+      result = User.find_by_id(db, follower_id)
+      Response.new(code: :ok, body: result).take
+    end
+
+    def unfollow(params)
+      follower_id = User.get_id(db, params['follower'])
+      followee_id = User.get_id(db, params['followee'])
+      db.query(
+        "DELETE FROM Followers
+         WHERE follower_id = '#{follower_id}'
+         AND followee_id = '#{followee_id}';"
+      )
+
+      result = User.find_by_id(db, follower_id)
+      Response.new(code: :ok, body: result).take
+    end
+
+    def list_followers(params)
+      user_id = User.get_id(db, params['user'])
+      followers = db.query(
+        "SELECT Users.email as email
+         FROM Followers
+         JOIN Users ON follower_id = Users.id
+         WHERE followee_id = '#{user_id}'
+         #{ since(params['since_id'], 'id') }
+         #{ order_by(params['order'], 'name') }
+         #{ limit(params['limit']) };"
+      )
+      result = followers.map do |row|
+        row['email'] = User.find_by_email(db, row['email'])
+      end
+      Response.new(code: :ok, body: result).take
+    end
+
+    def list_following(params)
+      user_id = User.get_id(db, params['user'])
+      followees = db.query(
+        "SELECT Users.email as email
+         FROM Followers
+         JOIN Users ON followee_id = Users.id
+         WHERE follower_id = '#{user_id}'
+         #{ since(params['since_id'], 'id') }
+         #{ order_by(params['order'], 'name') }
+         #{ limit(params['limit']) };"
+      )
+      result = followees.map do |row|
+        row['email'] = User.find_by_email(db, row['email'])
+      end
       Response.new(code: :ok, body: result).take
     end
 
@@ -65,8 +113,8 @@ module Model
       ).first
 
       res['followers'] = User.get_followers(db, res['id'])
-      res['followees'] = User.get_followees(db, res['id'])
-      # res['subscriptions'] = User.get_subscriptions(db, res['id'])
+      res['following'] = User.get_followees(db, res['id'])
+      res['subscriptions'] = User.get_subscriptions(db, res['id'])
       res
     end
 
@@ -75,9 +123,10 @@ module Model
         "SELECT * FROM #{table}
          WHERE id = '#{id}';"
       ).first
+
       res['followers'] = User.get_followers(db, res['id'])
-      res['followees'] = User.get_followees(db, res['id'])
-      # res['subscriptions'] = User.get_subscriptions(db, res['id'])
+      res['following'] = User.get_followees(db, res['id'])
+      res['subscriptions'] = User.get_subscriptions(db, res['id'])
       res
     end
 

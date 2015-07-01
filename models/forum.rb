@@ -31,18 +31,6 @@ module Model
     end
 
     def list_users(params)
-      forum_id = Forum.find_by_short_name(db, params['forum'])['id']
-      result = db.query(
-        "SELECT * FROM Users
-         INNER JOIN forum_authors a
-         ON user.id = a.author_id
-         WHERE a.forum_id = #{forum_id}
-         #{ since(params['since_id'], 'a.author_id') }
-         #{ order_by(params['order'], 'a.name') }
-         #{ limit(params['limit']) };"
-      )
-      result.map { |row| User.get_by_id(row['id']) }
-      raise result.count.inspect
     end
 
     def self.find_by_short_name(db, short_name, related = [])

@@ -7,13 +7,12 @@ module Model
     end
 
     def clear
-      db.query("DELETE FROM forum_authors;")
-      db.query("DELETE FROM subscription;")
-      db.query("DELETE FROM following;")
-      db.query("DELETE FROM post;")
-      db.query("DELETE FROM thread;")
-      db.query("DELETE FROM forum;")
-      db.query("DELETE FROM user;")
+      db.query("DELETE FROM #{User.table};")
+      db.query("DELETE FROM #{Forum.table};")
+      db.query("DELETE FROM #{Thread.table};")
+      db.query("DELETE FROM #{Post.table};")
+      db.query("DELETE FROM Followers;")
+      db.query("DELETE FROM Subscriptions;")
       Response.new(code: :ok, body: "OK").take
     end
 

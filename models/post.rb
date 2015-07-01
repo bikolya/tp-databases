@@ -1,16 +1,21 @@
 module Model
-  class Thread
-    attr_reader :db
+  class Post
+    attr_reader :db, :table
 
     def initialize
+      @table = Post.table
       @db = Connector.db
+    end
+
+    def self.table
+      "Posts"
     end
 
     def create(params)
       author_id = User.get_id(db, params['user'])
       forum_id = Forum.find_by_short_name(db, params['forum'])['id']
       db.query(
-        "INSERT INTO thread SET
+        "INSERT INTO #{table} SET
           author_id = '#{author_id}',
           forum_id = '#{forum_id}',
           thread_id = '#{thread}',
@@ -23,12 +28,12 @@ module Model
           date = '#{params['date']}',
           message = '#{params['message']}';"
       )
-      result = Thread.find_by_id(db, db.last_id)
+      result = Post.find_by_id(db, db.last_id)
       Response.new(code: :ok, body: result).take
     end
 
     def details(params)
-      result = Thread.find_by_id(db, params['thread'], params['related'])
+      result = Post.find_by_id(db, params['thread'], params['related'])
       Response.new(code: :ok, body: result).take
     end
 
