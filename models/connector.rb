@@ -8,7 +8,7 @@ class Connector
     @db = Mysql2::Client.new(
       host: 'localhost',
       username: 'root',
-      database: 'forum_api',
+      database: 'forum_db',
       password: 'qweqwe',
       cast_booleans: true
     )
