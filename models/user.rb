@@ -106,12 +106,47 @@ module Model
       Response.new(code: :ok, body: result).take
     end
 
+    def list_posts(params)
+      email = params['user']
+      user_id = User.get_id(db, email)
+      if (user_id.nil?)
+        Response.new(code: :not_found, body: "User not found").take
+      else
+        posts = db.query(
+          "SELECT
+          DATE_FORMAT(date, '%Y-%m-%d %H:%i:%s') AS date,
+          dislikes,
+          id,
+          isApproved,
+          isDeleted,
+          isEdited,
+          isHighlighted,
+          isSpam,
+          likes,
+          message,
+          parent_id as parent,
+          points,
+          thread_id as thread
+          FROM Posts
+          WHERE user_id = '#{user_id}'
+          #{ since(params['since'], 'date') }
+          #{ order_by(params['order'], 'date') }
+          #{ limit(params['limit']) };")
+
+        result = posts.each do |post|
+          post['user'] = email;
+          post['forum'] = Thread.find_by_id(db, post['thread'])['forum']
+        end
+        Response.new(code: :ok, body: result).take
+      end
+    end
+
     def self.find_by_email(db, email)
       res = db.query(
         "SELECT * FROM #{table}
          WHERE email = '#{email}';"
       ).first
-
+      raise RuntimeError if res.nil?
       res['followers'] = User.get_followers(db, res['id'])
       res['following'] = User.get_followees(db, res['id'])
       res['subscriptions'] = User.get_subscriptions(db, res['id'])
@@ -123,7 +158,7 @@ module Model
         "SELECT * FROM #{table}
          WHERE id = '#{id}';"
       ).first
-
+      raise RuntimeError if res.nil?
       res['followers'] = User.get_followers(db, res['id'])
       res['following'] = User.get_followees(db, res['id'])
       res['subscriptions'] = User.get_subscriptions(db, res['id'])

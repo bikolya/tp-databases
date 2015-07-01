@@ -17,6 +17,17 @@ module Model
     end
 
     def status
+      tables = {"user" => 'Users',
+                "thread" => 'Threads',
+                "forum" => 'Forums',
+                "post" => 'Posts'}
+
+      result = tables.reduce({}) do |result, (key, value)|
+        result.merge(key => db.query("SELECT COUNT(*) AS count
+                                      FROM #{value};")
+                              .first['count'])
+      end
+      Response.new(code: :ok, body: result).take
     end
 
   end

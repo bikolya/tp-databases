@@ -26,12 +26,26 @@ class Response
   end
 
   private
-    def clean_response(hash)
-      return hash unless hash.instance_of? Hash
+    def clean_response(body)
+      case body
+      when Hash
+        clean_hash(body)
+      when Array
+        clean_array(body)
+      else
+        body
+      end
+    end
+
+    def clean_hash(hash)
       hash.each do |k, v|
-        clean_response(v)
+        clean_hash(v) if v.instance_of? Hash
         hash[k] = nil if v == ""
       end
+    end
+
+    def clean_array(array)
+      array.each { |hash| clean_hash(hash) }
     end
 
     def normalized_code(code)
