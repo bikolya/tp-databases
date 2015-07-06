@@ -178,9 +178,78 @@ module Model
     end
 
     def restore(params)
+      begin
+        post_id = params['post']
+        begin
+          code = Code.ok
+          post = @client.query("SELECT * FROM Posts WHERE id='#{post_id}'").first
+          if (post.nil?)
+            return Response.new(code: :not_found, body: "Post not found").take
+          else
+            @client.query("UPDATE Posts SET isDeleted=false WHERE id='#{post_id}'")
+            @client.query ("UPDATE Threads SET count = count+1
+                            WHERE id = '#{post['thread_id']}'")
+            response = {:post => post_id}
+          end
+        rescue Mysql2::Error => e
+          Response.new(code: :unknown, body: e.message).take
+        end
+      rescue RuntimeError => e
+        Response.new(code: :bad_request, body: e.message).take
+      end
+      Response.new(code: :ok, body: response).take
     end
 
     def list(params)
+      begin
+        short_name = @client.escape(params['forum']) if params.include? 'forum'
+        thread_id = params['thread'] if params.include? 'thread'
+
+        unless thread_id.nil? ^ short_name.nil?
+          return Response.new(code: :unprocessable, body: "Invalid data").take
+        end
+
+        limit = params.include?('limit') ? " LIMIT #{params['limit']}" : ''
+        order = params.include?('order') ? " #{params['order']}" : 'desc'
+        since = params.include?('since') ? " AND Posts.date >= '#{params['since']}' " : ''
+
+        begin
+          code = Code.ok
+          if (thread_id)
+            thread = @client.query("SELECT * FROM Threads WHERE id = '#{thread_id}'")
+            if (thread.nil?)
+              return Response.new(code: :not_found, body: "Thread not found").take
+            end
+            where = " WHERE Threads.id = '#{thread_id}' "
+          else
+            forum_id = Forum.getId(@client, short_name)
+            if (forum_id.nil?)
+              return Response.new(code: :not_found, body: "Forum not found").take
+            end
+            where =  " WHERE Forums.id = '#{forum_id}' "
+          end
+          posts = @client.query("SELECT
+            DATE_FORMAT(Posts.date, '%Y-%m-%d %H:%i:%s') AS date,
+            Posts.dislikes, Forums.short_name as forum, Posts.id,
+            Posts.isApproved, Posts.isDeleted, Posts.isEdited,
+            Posts.isHighlighted, Posts.isSpam, Posts.likes,
+            Posts.message, Posts.parent_id as parent,
+            Posts.points, Posts.thread_id as thread,
+            Users.email as user
+            FROM Posts
+            JOIN Users ON Posts.user_id = Users.id
+            JOIN Threads ON Threads.id = Posts.thread_id
+            JOIN Forums ON Forums.id = Threads.forum_id
+            #{where} #{since}
+            ORDER BY date #{order} #{limit}")
+          response = posts.map{ |post| post }
+        rescue Mysql2::Error => e
+          Response.new(code: :unknown, body: e.message).take
+        end
+      rescue RuntimeError => e
+        Response.new(code: :bad_request, body: e.message).take
+      end
+      Response.new(code: :ok, body: response).take
     end
 
     def self.find_by_id(db, id, related = [])

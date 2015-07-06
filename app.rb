@@ -40,6 +40,7 @@ class App < Sinatra::Base
   namespace root do
     post 'clear/'  do json Model::System.new.clear end
     get  'status/' do json Model::System.new.status end
+
     namespace 'user/' do
       before do
         @user = Model::User.new
@@ -62,6 +63,7 @@ class App < Sinatra::Base
       get  'details/' do json @forum.details(@params) end
       get  'listUsers/' do json @forum.list_users(@params) end
       get  'listPosts/' do json @forum.list_posts(@params) end
+      get  'listThreads/' do json @forum.list_threads(@params) end
     end
 
     namespace 'thread/' do
@@ -90,9 +92,9 @@ class App < Sinatra::Base
       get  'details/' do json @post.details(@params) end
       post 'vote/' do json @post.vote(@params) end
       post 'restore/' do json @post.restore(@params) end
-
       post 'update/' do json @post.update(@params) end
       post 'remove/' do json @post.remove(@params) end
+      get  'list/' do json @post.list(@params) end
     end
   end
 end

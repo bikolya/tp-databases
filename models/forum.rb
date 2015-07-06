@@ -108,6 +108,59 @@ module Model
       end
     end
 
+    def list_threads(params)
+      begin
+        short_name = params['forum']
+
+        limit = params.include?('limit') ? " LIMIT #{params['limit']}" : ''
+        order = params.include?('order') ? " #{params['order']}" : 'desc'
+        since = params.include?('since') ? " AND date >= '#{params['since']}' " : ''
+
+        related = params['related']
+        unless related.nil?
+          forum_details = related.include? 'forum'
+          user_details = related.include? 'user'
+        end
+
+        begin
+          forum = Forum.find_by_short_name(db, short_name)
+          if (forum.nil?)
+            return Response.new(code: :not_found, body: "Forum not found").take
+          else
+            threads = db.query("SELECT
+              DATE_FORMAT(Threads.date, '%Y-%m-%d %H:%i:%s') AS date,
+              Threads.dislikes as dislikes,
+              short_name as forum,
+              Threads.id as id,
+              Threads.isClosed,
+              Threads.isDeleted,
+              likes,
+              Threads.message,
+              Threads.points,
+              Threads.count as posts,
+              Threads.slug as slug,
+              Threads.title as title,
+              Threads.user_id as user
+              FROM Forums JOIN Threads
+              ON Forums.id = Threads.forum_id
+              WHERE Forums.short_name = '#{short_name}' #{since}
+              ORDER BY date #{order} #{limit}")
+            response = threads.map do |thread|
+              email = User.find_by_id(db, thread['user'])
+              thread['user'] = user_details ? User.getUserDetails(db, email) : email
+              thread['forum'] = Forum.find_by_id(db, thread['forum']) if forum_details
+              thread
+            end
+          end
+        rescue Mysql2::Error => e
+          Response.new(code: :unknown, body: e.message).take
+        end
+      rescue RuntimeError => e
+        Response.new(code: :bad_request, body: e.message).take
+      end
+      Response.new(code: :ok, body: response).take
+    end
+
     def self.find_by_short_name(db, short_name, related = [])
       res = db.query(
         "SELECT * FROM #{table}

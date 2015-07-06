@@ -123,7 +123,7 @@ module Model
       email = params['user']
       short_name = params['forum']
       unless email.nil? ^ short_name.nil?
-        Response.new(code: :unprocessable, body: "Invalid data").take
+        return Response.new(code: :unprocessable, body: "Invalid data").take
       end
 
       begin
