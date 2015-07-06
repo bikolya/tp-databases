@@ -6,13 +6,8 @@ require 'cgi'
 require 'mysql2'
 require 'json'
 
-require './models/helpers'
-require './models/response'
-require './models/system'
-require './models/user'
-require './models/forum'
-require './models/thread'
-require './models/post'
+require './helpers'
+Dir['models/*.rb'].each {|file| require_relative "./#{file}" }
 
 class App < Sinatra::Base
   register Sinatra::Namespace

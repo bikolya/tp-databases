@@ -7,9 +7,9 @@ class Connector
   def initialize
     @db = Mysql2::Client.new(
       host: 'localhost',
-      username: 'root',
-      database: 'forum_db',
-      password: 'qweqwe',
+      username: ENV['DB_USER'],
+      database: ENV['DB_NAME'],
+      password: ENV['DB_PASSWORD'],
       cast_booleans: true
     )
   end
